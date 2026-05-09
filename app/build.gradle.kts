@@ -55,6 +55,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.navigation)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
@@ -73,6 +74,7 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt)
     ksp(libs.androidx.hilt.compiler)
+    implementation(libs.androidx.hilt.navigation)
 
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter)
