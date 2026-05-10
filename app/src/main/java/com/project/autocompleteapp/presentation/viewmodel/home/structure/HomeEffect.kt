@@ -1,4 +1,4 @@
-package com.project.autocompleteapp.presentation.viewmodel.home
+package com.project.autocompleteapp.presentation.viewmodel.home.structure
 
 sealed class HomeEffect {
 
