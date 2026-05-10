@@ -6,9 +6,9 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.project.autocompleteapp.presentation.viewmodel.home.HomeEffect
-import com.project.autocompleteapp.presentation.viewmodel.home.HomeEvent
-import com.project.autocompleteapp.presentation.viewmodel.home.HomeState
+import com.project.autocompleteapp.presentation.viewmodel.home.structure.HomeEffect
+import com.project.autocompleteapp.presentation.viewmodel.home.structure.HomeEvent
+import com.project.autocompleteapp.presentation.viewmodel.home.structure.HomeState
 import kotlinx.coroutines.flow.SharedFlow
 
 @Composable
