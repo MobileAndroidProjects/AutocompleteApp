@@ -4,4 +4,8 @@
     <dimen name="padding_s">8dp</dimen>
     <dimen name="padding_m">16dp</dimen>
     <dimen name="padding_l">32dp</dimen>
+
+    <dimen name="rounded_corner">16dp</dimen>
+    <dimen name="row_padding_top">4dp</dimen>
+    <dimen name="circular_progress_size">35dp</dimen>
 </resources>

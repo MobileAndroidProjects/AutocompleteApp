@@ -80,4 +80,6 @@ dependencies {
     implementation(libs.retrofit.converter)
     implementation(libs.retrofit.coroutines)
     implementation(libs.okhttp)
+
+    implementation(libs.compose.coil)
 }

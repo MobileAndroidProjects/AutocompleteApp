@@ -2,4 +2,23 @@
     <string name="app_name">AutocompleteApp</string>
 
     <string name="start_screen_btn_label">Go to Home screen</string>
+    <string name="start_screen_description">Click the button to navigate to the autocomplete component screen</string>
+
+    <string name="autocomplete_label">GitHub autocomplete field:</string>
+    <string name="autocomplete_result_label">Result:</string>
+    <string name="autocomplete_hint">Type Github User or Repository…</string>
+    <string name="autocomplete_empty_result">No results</string>
+    <string name="autocomplete_type_char">Type at least 3 characters</string>
+
+    <string name="selected_user_txt">Selected User:</string>
+    <string name="selected_repository_txt">Selected Repository:</string>
+    <string name="id_row">id: %s</string>
+    <string name="login_row">login: %s</string>
+    <string name="name_row">name: %s</string>
+    <string name="owner_row">owner: %s</string>
+    <string name="company_row">company: %s</string>
+    <string name="blog_row">blog: %s</string>
+    <string name="visibility_row">visibility: %s</string>
+    <string name="default_branch_row">default branch: %s</string>2
+    <string name="description_row">description: %s</string>
 </resources>

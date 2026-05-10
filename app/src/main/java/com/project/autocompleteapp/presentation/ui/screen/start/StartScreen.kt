@@ -13,9 +13,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.navigation.NavController
-import com.project.autocompleteapp.navigation.AppScreen
 import com.project.autocompleteapp.R
+import com.project.autocompleteapp.navigation.AppScreen
+import com.project.autocompleteapp.ui.theme.Typography
 import com.project.autocompleteapp.ui.theme.GreenLight
 
 @Composable
@@ -36,8 +38,14 @@ fun StartScreen(
                     vertical = dimensionResource(R.dimen.padding_l)
                 ),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.SpaceAround
         ) {
+            Text(
+                style = Typography.titleLarge,
+                textAlign = TextAlign.Center,
+                text = stringResource(R.string.start_screen_description)
+            )
+
             ElevatedButton(
                 modifier = Modifier
                     .padding(bottom = dimensionResource(R.dimen.padding_l)),
@@ -48,6 +56,7 @@ fun StartScreen(
                 Text(
                     modifier = Modifier
                         .padding(all = dimensionResource(R.dimen.padding_s)),
+                    style = Typography.titleLarge,
                     text = stringResource(R.string.start_screen_btn_label)
                 )
             }
