@@ -1,5 +1,6 @@
 package com.project.autocompleteapp.di
 
+import com.project.autocompleteapp.BuildConfig
 import com.project.autocompleteapp.data.api.ApiService
 import dagger.Module
 import dagger.Provides
@@ -16,7 +17,8 @@ import kotlin.jvm.java
 object NetworkModule {
 
     @Provides
-    fun provideBaseUrl(): String = "https://api.github.com/"
+    fun provideBaseUrl(): String = BuildConfig.API_HOST
+
 
     @Provides
     @Singleton
