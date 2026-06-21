@@ -10,6 +10,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import retrofit2.Response
@@ -27,47 +28,62 @@ class GithubRepositoryImplTest {
     }
 
     @Test
-    fun `getUser should call apiService getUser`() = runTest {
+    fun `getUser should return Success when apiService returns successful response`() = runTest {
         val userId = 1
-        val expectedResponse = Response.success(mockk<UserExtendedItem>())
-        coEvery { apiService.getUser(userId) } returns expectedResponse
+        val userItem = mockk<UserExtendedItem>()
+        coEvery { apiService.getUser(userId) } returns Response.success(userItem)
 
-        val actualResponse = repository.getUser(userId)
+        val result = repository.getUser(userId)
 
-        assertEquals(expectedResponse, actualResponse)
+        assertTrue(result.isSuccess)
+        assertEquals(userItem, result.getOrNull())
     }
 
     @Test
-    fun `getRepository should call apiService getRepository`() = runTest {
+    fun `getUser should return Failure when apiService returns null body`() = runTest {
+        val userId = 1
+        coEvery { apiService.getUser(userId) } returns Response.success(null)
+
+        val result = repository.getUser(userId)
+
+        assertTrue(result.isFailure)
+        assertEquals("User not found", result.exceptionOrNull()?.message)
+    }
+
+    @Test
+    fun `getRepository should return Success when apiService returns successful response`() = runTest {
         val owner = "owner"
         val repo = "repo"
-        val expectedResponse = Response.success(mockk<RepositoryExtendedItem>())
-        coEvery { apiService.getRepository(owner, repo) } returns expectedResponse
+        val repoItem = mockk<RepositoryExtendedItem>()
+        coEvery { apiService.getRepository(owner, repo) } returns Response.success(repoItem)
 
-        val actualResponse = repository.getRepository(owner, repo)
+        val result = repository.getRepository(owner, repo)
 
-        assertEquals(expectedResponse, actualResponse)
+        assertTrue(result.isSuccess)
+        assertEquals(repoItem, result.getOrNull())
     }
 
     @Test
-    fun `getUsers should call apiService getUsers with login qualifier`() = runTest {
+    fun `getUsers should return Success when apiService returns successful response`() = runTest {
         val input = "test"
-        val expectedResponse = Response.success(mockk<UsersDto>())
-        coEvery { apiService.getUsers("test in:login") } returns expectedResponse
+        val usersDto = mockk<UsersDto>()
+        coEvery { apiService.getUsers("test in:login") } returns Response.success(usersDto)
 
-        val actualResponse = repository.getUsers(input)
+        val result = repository.getUsers(input)
 
-        assertEquals(expectedResponse, actualResponse)
+        assertTrue(result.isSuccess)
+        assertEquals(usersDto, result.getOrNull())
     }
 
     @Test
-    fun `getRepositories should call apiService getRepositories with name qualifier`() = runTest {
+    fun `getRepositories should return Success when apiService returns successful response`() = runTest {
         val input = "test"
-        val expectedResponse = Response.success(mockk<RepositoriesDto>())
-        coEvery { apiService.getRepositories("test in:name") } returns expectedResponse
+        val repositoriesDto = mockk<RepositoriesDto>()
+        coEvery { apiService.getRepositories("test in:name") } returns Response.success(repositoriesDto)
 
-        val actualResponse = repository.getRepositories(input)
+        val result = repository.getRepositories(input)
 
-        assertEquals(expectedResponse, actualResponse)
+        assertTrue(result.isSuccess)
+        assertEquals(repositoriesDto, result.getOrNull())
     }
 }

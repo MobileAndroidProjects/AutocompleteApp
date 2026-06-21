@@ -1,6 +1,5 @@
 package com.project.autocompleteapp.domain.usecase
 
-import app.cash.turbine.test
 import com.project.autocompleteapp.domain.model.AutocompleteType
 import com.project.autocompleteapp.domain.model.OwnerDto
 import com.project.autocompleteapp.domain.model.RepositoriesDto
@@ -8,7 +7,6 @@ import com.project.autocompleteapp.domain.model.RepositoryItem
 import com.project.autocompleteapp.domain.model.UserItem
 import com.project.autocompleteapp.domain.model.UsersDto
 import com.project.autocompleteapp.domain.repository.GithubRepository
-import com.project.autocompleteapp.util.Resource
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -17,7 +15,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import retrofit2.Response
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class GetUsersAndRepositoriesUseCaseTest {
@@ -32,73 +29,76 @@ class GetUsersAndRepositoriesUseCaseTest {
     }
 
     @Test
-    fun `invoke should emit Loading and then Success when repository calls are successful`() = runTest {
+    fun `invoke should return empty list when query is blank`() = runTest {
+        val result = getUsersAndRepositoriesUseCase("   ")
+        assertTrue(result.isSuccess)
+        assertTrue(result.getOrNull()!!.isEmpty())
+    }
+
+    @Test
+    fun `invoke should return combined list of users and repositories`() = runTest {
         // Given
-        val input = "test"
+        val query = "test"
         val userItem = UserItem(id = 1, login = "user1")
         val usersDto = UsersDto(items = listOf(userItem))
         val ownerDto = OwnerDto(login = "owner1")
         val repositoryItem = RepositoryItem(id = 101, name = "repo1", owner = ownerDto)
         val repositoriesDto = RepositoriesDto(items = listOf(repositoryItem))
 
-        coEvery { githubRepository.getUsers(input) } returns Response.success(usersDto)
-        coEvery { githubRepository.getRepositories(input) } returns Response.success(repositoriesDto)
+        coEvery { githubRepository.getUsers(query) } returns Result.success(usersDto)
+        coEvery { githubRepository.getRepositories(query) } returns Result.success(repositoriesDto)
 
         // When
-        val result = getUsersAndRepositoriesUseCase(input)
+        val result = getUsersAndRepositoriesUseCase(query)
 
         // Then
-        result.test {
-            assertTrue(awaitItem() is Resource.Loading)
-            val successItem = awaitItem()
-            assertTrue(successItem is Resource.Success)
-            val data = (successItem as Resource.Success).data
-            assertEquals(2, data?.size)
-            assertEquals("user1", data?.get(0)?.value)
-            assertEquals(AutocompleteType.USER, data?.get(0)?.type)
-            assertEquals("repo1", data?.get(1)?.value)
-            assertEquals(AutocompleteType.REPOSITORY, data?.get(1)?.type)
-            awaitComplete()
-        }
+        assertTrue(result.isSuccess)
+        val data = result.getOrNull()
+        assertEquals(2, data?.size)
+        
+        val userResult = data?.get(0)
+        assertEquals(1, userResult?.id)
+        assertEquals("user1", userResult?.value)
+        assertEquals(AutocompleteType.USER, userResult?.type)
+
+        val repoResult = data?.get(1)
+        assertEquals(101, repoResult?.id)
+        assertEquals("repo1", repoResult?.value)
+        assertEquals("owner1", repoResult?.owner)
+        assertEquals(AutocompleteType.REPOSITORY, repoResult?.type)
     }
 
     @Test
-    fun `invoke should emit Loading and then Error when users call fail`() = runTest {
+    fun `invoke should return Success with partial data if one call fails`() = runTest {
         // Given
-        val input = "test"
-        coEvery { githubRepository.getUsers(input) } returns Response.error(404, mockk(relaxed = true))
-        coEvery { githubRepository.getRepositories(input) } returns Response.success(RepositoriesDto(emptyList()))
+        val query = "test"
+        val userItem = UserItem(id = 1, login = "user1")
+        val usersDto = UsersDto(items = listOf(userItem))
+
+        coEvery { githubRepository.getUsers(query) } returns Result.success(usersDto)
+        coEvery { githubRepository.getRepositories(query) } returns Result.failure(Exception("API Error"))
 
         // When
-        val result = getUsersAndRepositoriesUseCase(input)
+        val result = getUsersAndRepositoriesUseCase(query)
 
         // Then
-        result.test {
-            assertTrue(awaitItem() is Resource.Loading)
-            val errorItem = awaitItem()
-            assertTrue(errorItem is Resource.Error)
-            assertEquals("Error code: 404", (errorItem as Resource.Error).message)
-            awaitComplete()
-        }
+        assertTrue(result.isSuccess)
+        val data = result.getOrNull()
+        assertEquals(1, data?.size)
+        assertEquals("user1", data?.get(0)?.value)
     }
 
     @Test
-    fun `invoke should emit Loading and then Error when repositories call fail`() = runTest {
+    fun `invoke should return Failure if an unexpected exception occurs`() = runTest {
         // Given
-        val input = "test"
-        coEvery { githubRepository.getUsers(input) } returns Response.success(UsersDto(emptyList()))
-        coEvery { githubRepository.getRepositories(input) } returns Response.error(404, mockk(relaxed = true))
+        val query = "test"
+        coEvery { githubRepository.getUsers(query) } throws RuntimeException("Unexpected")
 
         // When
-        val result = getUsersAndRepositoriesUseCase(input)
+        val result = getUsersAndRepositoriesUseCase(query)
 
         // Then
-        result.test {
-            assertTrue(awaitItem() is Resource.Loading)
-            val errorItem = awaitItem()
-            assertTrue(errorItem is Resource.Error)
-            assertEquals("Error code: 404", (errorItem as Resource.Error).message)
-            awaitComplete()
-        }
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is RuntimeException)
     }
 }

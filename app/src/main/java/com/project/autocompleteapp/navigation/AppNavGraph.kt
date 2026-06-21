@@ -14,6 +14,7 @@ import com.project.autocompleteapp.presentation.ui.screen.home.HomeScreen
 import com.project.autocompleteapp.presentation.ui.screen.start.StartScreen
 import com.project.autocompleteapp.presentation.viewmodel.home.HomeViewModel
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.collectAsState
 
 @Composable
 fun AppNavGraph(
@@ -37,7 +38,8 @@ fun AppNavGraph(
         composable(AppScreen.HomeScreen.route) {
             val vm = hiltViewModel<HomeViewModel>()
             HomeScreen(
-                state = vm.state.value,
+                state = vm.state.collectAsState().value,
+                searchQuery = vm.searchQuery.collectAsState().value,
                 onEvent = vm::onEvent,
                 effect = vm.effect,
                 onError = {

@@ -11,19 +11,24 @@ import com.project.autocompleteapp.domain.usecase.GetUserUseCase
 import com.project.autocompleteapp.domain.usecase.GetUsersAndRepositoriesUseCase
 import com.project.autocompleteapp.presentation.viewmodel.home.structure.HomeEffect
 import com.project.autocompleteapp.presentation.viewmodel.home.structure.HomeEvent
-import com.project.autocompleteapp.util.Resource
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.*
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import retrofit2.Response
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
@@ -31,19 +36,27 @@ class HomeViewModelTest {
     @get:Rule
     val instantTaskExecutorRule = InstantTaskExecutorRule()
 
-    private lateinit var getUserUseCase: GetUserUseCase
-    private lateinit var getRepositoryUseCase: GetRepositoryUseCase
-    private lateinit var getUsersAndRepositoriesUseCase: GetUsersAndRepositoriesUseCase
-    private lateinit var viewModel: HomeViewModel
+    // Using UnconfinedTestDispatcher makes state updates immediate.
+    private val testDispatcher = UnconfinedTestDispatcher()
 
-    private val testDispatcher = StandardTestDispatcher()
+    private val getUserUseCase: GetUserUseCase = mockk(relaxed = true)
+    private val getRepositoryUseCase: GetRepositoryUseCase = mockk(relaxed = true)
+    private val getUsersAndRepositoriesUseCase: GetUsersAndRepositoriesUseCase = mockk(relaxed = true)
+
+    private lateinit var viewModel: HomeViewModel
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        getUserUseCase = mockk()
-        getRepositoryUseCase = mockk()
-        getUsersAndRepositoriesUseCase = mockk()
+
+        // Provide default answers to avoid "no answer found" exceptions
+        // especially during background search flow triggers or when Result type is involved.
+        // We use any() to catch all background calls initiated in the ViewModel's init block.
+        coEvery { getUsersAndRepositoriesUseCase(any()) } returns Result.success(emptyList())
+        coEvery { getUserUseCase(any()) } returns Result.success(mockk(relaxed = true))
+        coEvery { getRepositoryUseCase(any(), any()) } returns Result.success(mockk(relaxed = true))
+
+        // Initialize ViewModel after setting Main dispatcher and configuring default mocks
         viewModel = HomeViewModel(
             getUserUseCase,
             getRepositoryUseCase,
@@ -57,112 +70,190 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `onEvent OnAutocompleteInputChanged should update state and fetch data when actionTriggered is true`() = runTest {
-        // Given
-        val input = "test"
-        val list = listOf(AutocompleteListItem(1, "test", type = AutocompleteType.USER))
-        coEvery { getUsersAndRepositoriesUseCase(input) } returns flowOf(
-            Resource.Loading(),
-            Resource.Success(list)
-        )
-
-        // When
-        viewModel.onEvent(HomeEvent.OnAutocompleteInputChanged(input = input, actionTriggered = true))
-        advanceUntilIdle()
-
-        // Then
-        assertEquals(input, viewModel.state.value.input)
-        assertEquals(list, viewModel.state.value.list)
-        assertFalse(viewModel.state.value.isLoading)
+    fun `initial state should be correct`() = runTest {
+        val state = viewModel.state.value
+        assertFalse(state.isLoading)
+        assertTrue(state.list?.isEmpty() ?: false)
+        assertEquals(null, state.selectedUser)
+        assertEquals(null, state.selectedRepository)
+        assertEquals("", viewModel.searchQuery.value)
     }
 
     @Test
-    fun `onEvent OnAutocompleteInputChanged should update state and not fetch data when actionTriggered is false`() = runTest {
-        // Given
-        val input = "te"
-
-        // When
-        viewModel.onEvent(HomeEvent.OnAutocompleteInputChanged(input = input, actionTriggered = false))
-        advanceUntilIdle()
-
-        // Then
-        assertEquals(input, viewModel.state.value.input)
-        assertTrue(viewModel.state.value.list!!.isEmpty())
-        assertFalse(viewModel.state.value.isLoading)
-    }
-
-    @Test
-    fun `onEvent OnAutocompleteItemSelected for User should fetch user details`() = runTest {
-        // Given
-        val input = "test"
-        val userItem = AutocompleteListItem(1, "user1", type = AutocompleteType.USER)
-        val list = listOf(userItem)
-        coEvery { getUsersAndRepositoriesUseCase(input) } returns flowOf(Resource.Success(list))
+    fun `OnAutocompleteInputChanged updates searchQuery`() = runTest {
+        val query = "test"
         
-        val userExtendedItem = mockk<UserExtendedItem>()
-        coEvery { getUserUseCase(1) } returns flowOf(
-            Resource.Loading(),
-            Resource.Success(Response.success(userExtendedItem))
-        )
-
-        // Set initial state with list
-        viewModel.onEvent(HomeEvent.OnAutocompleteInputChanged(input = input, actionTriggered = true))
-        advanceUntilIdle()
-
         // When
-        viewModel.onEvent(HomeEvent.OnAutocompleteItemSelected(0))
-        advanceUntilIdle()
+        viewModel.onEvent(HomeEvent.OnAutocompleteInputChanged(query))
 
         // Then
-        assertEquals("user1", viewModel.state.value.input)
-        assertEquals(userExtendedItem, viewModel.state.value.selectedUser)
-        assertFalse(viewModel.state.value.isLoading)
+        // With UnconfinedTestDispatcher, the value update is immediate.
+        assertEquals(query, viewModel.searchQuery.value)
     }
 
     @Test
-    fun `onEvent OnAutocompleteItemSelected for Repository should fetch repository details`() = runTest {
+    fun `search query shorter than threshold clears list`() = runTest {
         // Given
-        val input = "test"
-        val repoItem = AutocompleteListItem(1, "repo1", owner = "owner1", type = AutocompleteType.REPOSITORY)
-        val list = listOf(repoItem)
-        coEvery { getUsersAndRepositoriesUseCase(input) } returns flowOf(Resource.Success(list))
+        val query = "ab"
         
-        val repoExtendedItem = mockk<RepositoryExtendedItem>()
-        coEvery { getRepositoryUseCase("owner1", "repo1") } returns flowOf(
-            Resource.Loading(),
-            Resource.Success(Response.success(repoExtendedItem))
-        )
-
-        // Set initial state with list
-        viewModel.onEvent(HomeEvent.OnAutocompleteInputChanged(input = input, actionTriggered = true))
-        advanceUntilIdle()
-
         // When
-        viewModel.onEvent(HomeEvent.OnAutocompleteItemSelected(0))
-        advanceUntilIdle()
+        viewModel.onEvent(HomeEvent.OnAutocompleteInputChanged(query))
+        
+        // Advance time to pass the 500ms debounce
+        advanceTimeBy(600)
+        runCurrent()
 
         // Then
-        assertEquals("repo1", viewModel.state.value.input)
-        assertEquals(repoExtendedItem, viewModel.state.value.selectedRepository)
+        assertTrue(viewModel.state.value.list?.isEmpty() ?: false)
         assertFalse(viewModel.state.value.isLoading)
     }
 
     @Test
-    fun `fetchData error should emit ErrorOccurred effect`() = runTest {
+    fun `search query triggers usecase and updates state on success`() = runTest {
         // Given
-        val input = "test"
+        val query = "android"
+        val mockItems = listOf(
+            AutocompleteListItem(id = 1, value = "android", type = AutocompleteType.USER)
+        )
+        // Specific override for this test
+        coEvery { getUsersAndRepositoriesUseCase(query) } returns Result.success(mockItems)
+
+        // When
+        viewModel.onEvent(HomeEvent.OnAutocompleteInputChanged(query))
+        
+        // Advance time to pass the 500ms debounce
+        advanceTimeBy(600)
+        runCurrent()
+
+        // Then
+        assertEquals(mockItems, viewModel.state.value.list)
+        assertFalse(viewModel.state.value.isLoading)
+    }
+
+    @Test
+    fun `debounce should delay usecase call`() = runTest {
+        // Given
+        val query = "android"
+        coEvery { getUsersAndRepositoriesUseCase(query) } returns Result.success(emptyList())
+
+        // When
+        viewModel.onEvent(HomeEvent.OnAutocompleteInputChanged(query))
+        
+        // Advance time just before debounce (500ms)
+        advanceTimeBy(400)
+        runCurrent()
+
+        // Then: Usecase should not have been called yet
+        coVerify(exactly = 0) { getUsersAndRepositoriesUseCase(query) }
+
+        // Advance past debounce
+        advanceTimeBy(101)
+        runCurrent()
+
+        // Then: Usecase should have been called
+        coVerify(exactly = 1) { getUsersAndRepositoriesUseCase(query) }
+    }
+
+    @Test
+    fun `debounce should only trigger search for the latest query`() = runTest {
+        // Given
+        val query1 = "andr"
+        val query2 = "andro"
+        val query3 = "android"
+        coEvery { getUsersAndRepositoriesUseCase(any()) } returns Result.success(emptyList())
+
+        // When
+        viewModel.onEvent(HomeEvent.OnAutocompleteInputChanged(query1))
+        advanceTimeBy(200)
+        viewModel.onEvent(HomeEvent.OnAutocompleteInputChanged(query2))
+        advanceTimeBy(200)
+        viewModel.onEvent(HomeEvent.OnAutocompleteInputChanged(query3))
+        
+        // Advance remaining time for the last debounce
+        advanceTimeBy(501)
+        runCurrent()
+
+        // Then: Only the last query should have triggered the usecase
+        coVerify(exactly = 1) { getUsersAndRepositoriesUseCase(query3) }
+        coVerify(exactly = 0) { getUsersAndRepositoriesUseCase(query1) }
+        coVerify(exactly = 0) { getUsersAndRepositoriesUseCase(query2) }
+    }
+
+    @Test
+    fun `search query updates effect on failure`() = runTest {
+        // Given
+        val query = "error"
         val errorMessage = "Something went wrong"
-        coEvery { getUsersAndRepositoriesUseCase(input) } returns flowOf(
-            Resource.Loading(),
-            Resource.Error(errorMessage)
-        )
+        coEvery { getUsersAndRepositoriesUseCase(query) } returns Result.failure(Exception(errorMessage))
 
-        // When & Then
         viewModel.effect.test {
-            viewModel.onEvent(HomeEvent.OnAutocompleteInputChanged(input = input, actionTriggered = true))
+            // When
+            viewModel.onEvent(HomeEvent.OnAutocompleteInputChanged(query))
+            advanceTimeBy(600)
+            runCurrent()
+
+            // Then
             val effect = awaitItem()
             assertTrue(effect is HomeEffect.ErrorOccurred)
             assertEquals(errorMessage, (effect as HomeEffect.ErrorOccurred).msg)
         }
+    }
+
+    @Test
+    fun `OnAutocompleteItemSelected USER fetches user details`() = runTest {
+        // Given
+        val userId = 1
+        val query = "user"
+        val mockItems = listOf(
+            AutocompleteListItem(id = userId, value = "user1", type = AutocompleteType.USER)
+        )
+        val userDetails = mockk<UserExtendedItem>(relaxed = true)
+        
+        coEvery { getUsersAndRepositoriesUseCase(query) } returns Result.success(mockItems)
+        coEvery { getUserUseCase(userId) } returns Result.success(userDetails)
+
+        // 1. Populate list first
+        viewModel.onEvent(HomeEvent.OnAutocompleteInputChanged(query))
+        advanceTimeBy(600)
+        runCurrent()
+
+        // 2. Select item
+        viewModel.onEvent(HomeEvent.OnAutocompleteItemSelected(userId))
+        runCurrent()
+
+        // Then
+        assertEquals(userDetails, viewModel.state.value.selectedUser)
+        assertTrue(viewModel.state.value.list?.isEmpty() ?: false)
+        assertFalse(viewModel.state.value.isLoading)
+    }
+
+    @Test
+    fun `OnAutocompleteItemSelected REPOSITORY fetches repository details`() = runTest {
+        // Given
+        val repoId = 101
+        val repoName = "repo1"
+        val owner = "owner1"
+        val query = "repo"
+        val mockItems = listOf(
+            AutocompleteListItem(id = repoId, value = repoName, type = AutocompleteType.REPOSITORY, owner = owner)
+        )
+        val repoDetails = mockk<RepositoryExtendedItem>(relaxed = true)
+        
+        coEvery { getUsersAndRepositoriesUseCase(query) } returns Result.success(mockItems)
+        coEvery { getRepositoryUseCase(owner, repoName) } returns Result.success(repoDetails)
+
+        // 1. Populate list first
+        viewModel.onEvent(HomeEvent.OnAutocompleteInputChanged(query))
+        advanceTimeBy(600)
+        runCurrent()
+
+        // 2. Select item
+        viewModel.onEvent(HomeEvent.OnAutocompleteItemSelected(repoId))
+        runCurrent()
+
+        // Then
+        assertEquals(repoDetails, viewModel.state.value.selectedRepository)
+        assertTrue(viewModel.state.value.list?.isEmpty() ?: false)
+        assertFalse(viewModel.state.value.isLoading)
     }
 }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -32,7 +33,6 @@ import com.project.autocompleteapp.ui.theme.GreyDark
 import com.project.autocompleteapp.ui.theme.GreyLight
 import com.project.autocompleteapp.ui.theme.White
 
-private const val INPUT_LENGTH_THRESHOLD = 3
 
 @Composable
 fun AutocompleteField(
@@ -40,7 +40,8 @@ fun AutocompleteField(
     resultList: List<AutocompleteListItem>,
     input: String,
     isLoading: Boolean,
-    onInputChanged: (String, Boolean) -> Unit,
+    inputLengthThreshold: Int,
+    onInputChanged: (String) -> Unit,
     onItemSelected: (Int) -> Unit
 ) {
     val focusManager = LocalFocusManager.current
@@ -117,7 +118,7 @@ fun AutocompleteField(
                 }
             },
             onValueChange = {
-                onInputChanged.invoke(it, it.length >= INPUT_LENGTH_THRESHOLD)
+                onInputChanged.invoke(it)
                 isSelected = false
             }
         )
@@ -129,13 +130,16 @@ fun AutocompleteField(
                 .fillMaxWidth()
                 .background(color = White)
         ) {
-            items(resultList.size) {
+            items(
+                items = resultList,
+                key = { it.id }
+            ) { item ->
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(color = White)
                         .clickable(true) {
-                            onItemSelected(it)
+                            onItemSelected(item.id)
                             focusManager.clearFocus()
                             isSelected = true
                         },
@@ -143,24 +147,31 @@ fun AutocompleteField(
                     Text(
                         modifier = Modifier.padding(all = dimensionResource(R.dimen.padding_xxs)),
                         style = Typography.labelMedium,
-                        text = resultList[it].value,
-                        color = resultList[it].type.color
+                        text = item.value,
+                        color = item.type.color
                     )
                 }
             }
         }
 
-        if (resultList.isEmpty() && input.isNotEmpty() && !isSelected && !isLoading) {
-            Text(
-                modifier = Modifier.padding(all = dimensionResource(R.dimen.padding_xxs)),
-                style = Typography.labelMedium,
-                text = if (input.length >= INPUT_LENGTH_THRESHOLD) {
-                    stringResource(R.string.autocomplete_empty_result)
-                } else {
-                    stringResource(R.string.autocomplete_type_char)
-                },
-                color = GreyDark
-            )
+        if (isTextFieldFocused && input.isNotEmpty() && !isSelected && !isLoading) {
+            if (input.length < inputLengthThreshold) {
+                // Show "Type at least 3 characters"
+                Text(
+                    modifier = Modifier.padding(all = dimensionResource(R.dimen.padding_xxs)),
+                    style = Typography.labelMedium,
+                    text = stringResource(R.string.autocomplete_type_char),
+                    color = GreyDark
+                )
+            } else if (resultList.isEmpty()) {
+                // Show "No results found" only if we reached the threshold and list is still empty
+                Text(
+                    modifier = Modifier.padding(all = dimensionResource(R.dimen.padding_xxs)),
+                    style = Typography.labelMedium,
+                    text = stringResource(R.string.autocomplete_empty_result),
+                    color = GreyDark
+                )
+            }
         }
     }
 }

@@ -1,7 +1,5 @@
 package com.project.autocompleteapp.presentation.viewmodel.home
 
-import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.project.autocompleteapp.domain.model.AutocompleteType
@@ -11,62 +9,100 @@ import com.project.autocompleteapp.domain.usecase.GetUsersAndRepositoriesUseCase
 import com.project.autocompleteapp.presentation.viewmodel.home.structure.HomeEffect
 import com.project.autocompleteapp.presentation.viewmodel.home.structure.HomeEvent
 import com.project.autocompleteapp.presentation.viewmodel.home.structure.HomeState
-import com.project.autocompleteapp.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val getUserUseCase: GetUserUseCase,
     private val getRepositoryUseCase: GetRepositoryUseCase,
     private val getUsersAndRepositoriesUseCase: GetUsersAndRepositoriesUseCase
-): ViewModel() {
+) : ViewModel() {
 
-    private val _state = mutableStateOf(HomeState())
-    val state: State<HomeState> = _state
+    companion object {
+        const val INPUT_LENGTH_THRESHOLD = 3
+        private const val DEBOUNCE_TIMEOUT_MILLIS = 500L
+    }
 
+    private val _state = MutableStateFlow(HomeState())
+    val state = _state.asStateFlow()
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery = _searchQuery.asStateFlow()
     private val _effect = MutableSharedFlow<HomeEffect>()
     val effect = _effect.asSharedFlow()
 
-    private var currentSearchJob: Job? = null
+    init {
+        observeSearchQuery()
+    }
+
+    private fun observeSearchQuery() {
+        _searchQuery
+            .debounce(DEBOUNCE_TIMEOUT_MILLIS)
+            .distinctUntilChanged()
+            .onEach { query ->
+                // Clear results if query is too short
+                if (query.length < INPUT_LENGTH_THRESHOLD) {
+                    _state.update { it.copy(list = emptyList(), isLoading = false) }
+                }
+            }
+            .filter { it.length >= INPUT_LENGTH_THRESHOLD }
+            .flatMapLatest { query ->
+                flow {
+                    _state.update { it.copy(isLoading = true) }
+                    val result = getUsersAndRepositoriesUseCase(query)
+                    emit(result)
+                }
+            }
+            .onEach { result ->
+                result.onSuccess { items ->
+                    _state.update { it.copy(list = items, isLoading = false) }
+                }
+                result.onFailure { error ->
+                    _state.update { it.copy(isLoading = false) }
+                    _effect.emit(HomeEffect.ErrorOccurred(error.message))
+                }
+            }
+            .launchIn(viewModelScope)
+    }
 
     fun onEvent(event: HomeEvent) {
         when (event) {
             is HomeEvent.OnAutocompleteInputChanged -> {
-                _state.value = _state.value.copy(
-                    input = event.input,
-                    list = emptyList(),
-                    selectedUser = null,
-                    selectedRepository = null
-                )
-
-                if (event.actionTriggered) {
-                    fetchData(event.input)
-                } else {
-                    dismissCurrentSearch()
-                    _state.value = _state.value.copy(isLoading = false)
-                }
+                _searchQuery.value = event.input
             }
             is HomeEvent.OnAutocompleteItemSelected -> {
-                val selectedItem = _state.value.list?.get(event.index)
-                selectedItem?.let {
-                    _state.value = _state.value.copy(
-                        input = it.value,
-                        list = emptyList()
-                    )
+                // Safely get item from the current list
+                _state.value.list?.firstOrNull { it.id == event.id }?.let { selectedItem ->
+                    // 1. Clear the suggestions and previous selections
+                    _state.update { it.copy(
+                        list = emptyList(),
+                        selectedUser = null,
+                        selectedRepository = null
+                    ) }
 
-                    when (it.type) {
-                        AutocompleteType.USER -> getUser(
-                            userId = it.id
-                        )
+                    // 2. Execute detail fetch
+                    when (selectedItem.type) {
+                        AutocompleteType.USER -> getUser(selectedItem.id)
                         AutocompleteType.REPOSITORY -> getRepository(
-                            owner = it.owner.orEmpty(),
-                            repo = it.value
+                            owner = selectedItem.owner.orEmpty(),
+                            repo = selectedItem.value
                         )
                     }
                 }
@@ -75,65 +111,32 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun getUser(userId: Int) {
-        getUserUseCase(userId = userId).onEach { result ->
-            handleRequestResult(result) {
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    selectedUser = result.data?.body()
-                )
-            }
-        }.launchIn(viewModelScope)
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true) }
+            getUserUseCase(userId).fold(
+                onSuccess = { user ->
+                    _state.update { it.copy(isLoading = false, selectedUser = user) }
+                },
+                onFailure = { throwable ->
+                    _state.update { it.copy(isLoading = false) }
+                    _effect.emit(HomeEffect.ErrorOccurred(throwable.message))
+                }
+            )
+        }
     }
 
     private fun getRepository(owner: String, repo: String) {
-        getRepositoryUseCase(owner = owner, repo = repo).onEach { result ->
-            handleRequestResult(result) {
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    selectedRepository = result.data?.body()
-                )
-            }
-        }.launchIn(viewModelScope)
-    }
-
-    private fun fetchData(input: String) {
-        dismissCurrentSearch()
-        currentSearchJob = getUsersAndRepositoriesUseCase(input = input).onEach { result ->
-            handleRequestResult(result) {
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    list = result.data?.distinct()?.sortedBy { it.value }
-                )
-            }
-        }.launchIn(viewModelScope)
-    }
-
-    private fun dismissCurrentSearch() {
-        currentSearchJob?.let {
-            if (!it.isCompleted) {
-                it.cancel()
-            }
-        }
-        currentSearchJob = null
-    }
-
-    private suspend fun <T> handleRequestResult(
-        result: Resource<T>,
-        onSuccess: (Resource<T>) -> Unit
-    ) {
-        when (result) {
-            is Resource.Loading -> {
-                _state.value = _state.value.copy(
-                    isLoading = true
-                )
-            }
-            is Resource.Success -> onSuccess(result)
-            is Resource.Error -> {
-                _state.value = _state.value.copy(
-                    isLoading = false
-                )
-                _effect.emit(HomeEffect.ErrorOccurred(result.message))
-            }
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true) }
+            getRepositoryUseCase(owner, repo).fold(
+                onSuccess = { repository ->
+                    _state.update { it.copy(isLoading = false, selectedRepository = repository) }
+                },
+                onFailure = { throwable ->
+                    _state.update { it.copy(isLoading = false) }
+                    _effect.emit(HomeEffect.ErrorOccurred(throwable.message))
+                }
+            )
         }
     }
 }

@@ -17,8 +17,10 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import com.project.autocompleteapp.R
+import com.project.autocompleteapp.domain.model.AutocompleteListItem
 import com.project.autocompleteapp.presentation.ui.components.AutocompleteField
 import com.project.autocompleteapp.presentation.ui.components.DetailsField
+import com.project.autocompleteapp.presentation.viewmodel.home.HomeViewModel
 import com.project.autocompleteapp.presentation.viewmodel.home.structure.HomeEffect
 import com.project.autocompleteapp.presentation.viewmodel.home.structure.HomeEvent
 import com.project.autocompleteapp.presentation.viewmodel.home.structure.HomeState
@@ -28,6 +30,7 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun HomeScreen(
     state: HomeState,
+    searchQuery: String,
     onEvent: (HomeEvent) -> Unit,
     effect: SharedFlow<HomeEffect>,
     onError: (String?) -> Unit
@@ -63,18 +66,18 @@ fun HomeScreen(
         ) {
             AutocompleteField(
                 title = stringResource(R.string.autocomplete_label),
-                resultList = state.list.orEmpty(),
-                input = state.input,
+                resultList = state.list?.sortedWith(compareBy(
+                    String.CASE_INSENSITIVE_ORDER,AutocompleteListItem::value
+                )).orEmpty(),
+                input = searchQuery,
                 isLoading = state.isLoading,
-                onInputChanged = { input, triggered ->
-                    onEvent(
-                        HomeEvent.OnAutocompleteInputChanged(
-                            input = input, actionTriggered = triggered
-                        )
-                    )
+                inputLengthThreshold = HomeViewModel.INPUT_LENGTH_THRESHOLD,
+                onInputChanged = { input ->
+                    onEvent(HomeEvent.OnAutocompleteInputChanged(input = input))
                 },
                 onItemSelected = {
-                    onEvent(HomeEvent.OnAutocompleteItemSelected(index = it))
+                    keyboardController?.hide()
+                    onEvent(HomeEvent.OnAutocompleteItemSelected(id = it))
                 }
             )
 
