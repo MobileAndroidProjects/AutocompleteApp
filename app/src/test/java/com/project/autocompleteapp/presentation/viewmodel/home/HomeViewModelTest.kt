@@ -6,9 +6,9 @@ import com.project.autocompleteapp.domain.model.AutocompleteListItem
 import com.project.autocompleteapp.domain.model.AutocompleteType
 import com.project.autocompleteapp.domain.model.RepositoryExtendedItem
 import com.project.autocompleteapp.domain.model.UserExtendedItem
-import com.project.autocompleteapp.domain.usecase.GetRepositoryUseCase
-import com.project.autocompleteapp.domain.usecase.GetUserUseCase
-import com.project.autocompleteapp.domain.usecase.GetUsersAndRepositoriesUseCase
+import com.project.autocompleteapp.domain.use_case.GetRepositoryUseCase
+import com.project.autocompleteapp.domain.use_case.GetUserUseCase
+import com.project.autocompleteapp.domain.use_case.GetUsersAndRepositoriesUseCase
 import com.project.autocompleteapp.presentation.viewmodel.home.structure.HomeEffect
 import com.project.autocompleteapp.presentation.viewmodel.home.structure.HomeEvent
 import io.mockk.coEvery
@@ -82,7 +82,7 @@ class HomeViewModelTest {
     @Test
     fun `OnAutocompleteInputChanged updates searchQuery`() = runTest {
         val query = "test"
-        
+
         // When
         viewModel.onEvent(HomeEvent.OnAutocompleteInputChanged(query))
 
@@ -95,7 +95,7 @@ class HomeViewModelTest {
     fun `search query shorter than threshold clears list`() = runTest {
         // Given
         val query = "ab"
-        
+
         // When
         viewModel.onEvent(HomeEvent.OnAutocompleteInputChanged(query))
         
@@ -138,7 +138,7 @@ class HomeViewModelTest {
 
         // When
         viewModel.onEvent(HomeEvent.OnAutocompleteInputChanged(query))
-        
+
         // Advance time just before debounce (500ms)
         advanceTimeBy(400)
         runCurrent()
@@ -203,14 +203,15 @@ class HomeViewModelTest {
     fun `OnAutocompleteItemSelected USER fetches user details`() = runTest {
         // Given
         val userId = 1
+        val username = "user1"
         val query = "user"
         val mockItems = listOf(
-            AutocompleteListItem(id = userId, value = "user1", type = AutocompleteType.USER)
+            AutocompleteListItem(id = userId, value = username, type = AutocompleteType.USER)
         )
         val userDetails = mockk<UserExtendedItem>(relaxed = true)
         
         coEvery { getUsersAndRepositoriesUseCase(query) } returns Result.success(mockItems)
-        coEvery { getUserUseCase(userId) } returns Result.success(userDetails)
+        coEvery { getUserUseCase(username) } returns Result.success(userDetails)
 
         // 1. Populate list first
         viewModel.onEvent(HomeEvent.OnAutocompleteInputChanged(query))

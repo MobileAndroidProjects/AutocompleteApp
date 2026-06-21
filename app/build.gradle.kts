@@ -7,11 +7,7 @@ plugins {
 
 android {
     namespace = "com.project.autocompleteapp"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.project.autocompleteapp"
@@ -26,7 +22,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             isDebuggable = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -39,8 +36,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures {
         buildConfig = true
@@ -74,14 +71,12 @@ dependencies {
 
     implementation(libs.hilt)
     ksp(libs.hilt.compiler)
-    implementation(libs.androidx.hilt)
-    ksp(libs.androidx.hilt.compiler)
     implementation(libs.androidx.hilt.navigation)
 
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter)
-    implementation(libs.retrofit.coroutines)
     implementation(libs.okhttp)
+    implementation(libs.okhttp.logging)
 
     implementation(libs.compose.coil)
 }

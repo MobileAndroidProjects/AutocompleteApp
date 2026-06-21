@@ -1,6 +1,6 @@
-package com.project.autocompleteapp.domain.usecase
+package com.project.autocompleteapp.domain.use_case
 
-import com.project.autocompleteapp.domain.model.RepositoryExtendedItem
+import com.project.autocompleteapp.domain.model.UserExtendedItem
 import com.project.autocompleteapp.domain.repository.GithubRepository
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -12,43 +12,41 @@ import org.junit.Before
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class GetRepositoryUseCaseTest {
+class GetUserUseCaseTest {
 
     private lateinit var githubRepository: GithubRepository
-    private lateinit var getRepositoryUseCase: GetRepositoryUseCase
+    private lateinit var getUserUseCase: GetUserUseCase
 
     @Before
     fun setUp() {
         githubRepository = mockk()
-        getRepositoryUseCase = GetRepositoryUseCase(githubRepository)
+        getUserUseCase = GetUserUseCase(githubRepository)
     }
 
     @Test
     fun `invoke should return Success when repository call is successful`() = runTest {
         // Given
-        val owner = "owner"
-        val repo = "repo"
-        val repositoryExtendedItem = mockk<RepositoryExtendedItem>()
-        coEvery { githubRepository.getRepository(owner, repo) } returns Result.success(repositoryExtendedItem)
+        val username = "testuser"
+        val userExtendedItem = mockk<UserExtendedItem>()
+        coEvery { githubRepository.getUser(username) } returns Result.success(userExtendedItem)
 
         // When
-        val result = getRepositoryUseCase(owner, repo)
+        val result = getUserUseCase(username)
 
         // Then
         assertTrue(result.isSuccess)
-        assertEquals(repositoryExtendedItem, result.getOrNull())
+        assertEquals(userExtendedItem, result.getOrNull())
     }
 
     @Test
     fun `invoke should return Failure when repository call fails`() = runTest {
         // Given
-        val owner = "owner"
-        val repo = "repo"
+        val username = "testuser"
         val exception = Exception("Network error")
-        coEvery { githubRepository.getRepository(owner, repo) } returns Result.failure(exception)
+        coEvery { githubRepository.getUser(username) } returns Result.failure(exception)
 
         // When
-        val result = getRepositoryUseCase(owner, repo)
+        val result = getUserUseCase(username)
 
         // Then
         assertTrue(result.isFailure)
@@ -57,16 +55,12 @@ class GetRepositoryUseCaseTest {
 
     @Test
     fun `invoke should catch and return Failure when repository throws exception`() = runTest {
-        // Given
-        val owner = "owner"
-        val repo = "repo"
+        val username = "testuser"
         val exception = Exception("Unexpected error")
-        coEvery { githubRepository.getRepository(owner, repo) } throws exception
+        coEvery { githubRepository.getUser(username) } throws exception
 
-        // When
-        val result = getRepositoryUseCase(owner, repo)
+        val result = getUserUseCase(username)
 
-        // Then
         assertTrue(result.isFailure)
         assertEquals(exception, result.exceptionOrNull())
     }

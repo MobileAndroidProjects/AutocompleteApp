@@ -3,9 +3,9 @@ package com.project.autocompleteapp.presentation.viewmodel.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.project.autocompleteapp.domain.model.AutocompleteType
-import com.project.autocompleteapp.domain.usecase.GetRepositoryUseCase
-import com.project.autocompleteapp.domain.usecase.GetUserUseCase
-import com.project.autocompleteapp.domain.usecase.GetUsersAndRepositoriesUseCase
+import com.project.autocompleteapp.domain.use_case.GetRepositoryUseCase
+import com.project.autocompleteapp.domain.use_case.GetUserUseCase
+import com.project.autocompleteapp.domain.use_case.GetUsersAndRepositoriesUseCase
 import com.project.autocompleteapp.presentation.viewmodel.home.structure.HomeEffect
 import com.project.autocompleteapp.presentation.viewmodel.home.structure.HomeEvent
 import com.project.autocompleteapp.presentation.viewmodel.home.structure.HomeState
@@ -45,6 +45,8 @@ class HomeViewModel @Inject constructor(
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
+
+    private val _searchTrigger = MutableSharedFlow<String>()
     private val _effect = MutableSharedFlow<HomeEffect>()
     val effect = _effect.asSharedFlow()
 
@@ -53,7 +55,7 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun observeSearchQuery() {
-        _searchQuery
+        _searchTrigger
             .debounce(DEBOUNCE_TIMEOUT_MILLIS)
             .distinctUntilChanged()
             .onEach { query ->
@@ -86,6 +88,10 @@ class HomeViewModel @Inject constructor(
         when (event) {
             is HomeEvent.OnAutocompleteInputChanged -> {
                 _searchQuery.value = event.input
+                // Trigger the search flow only for manual input
+                viewModelScope.launch {
+                    _searchTrigger.emit(event.input)
+                }
             }
             is HomeEvent.OnAutocompleteItemSelected -> {
                 // Safely get item from the current list
@@ -97,9 +103,12 @@ class HomeViewModel @Inject constructor(
                         selectedRepository = null
                     ) }
 
-                    // 2. Execute detail fetch
+                    // 2. Update the UI text field, but DON'T emit to _searchTrigger
+                    _searchQuery.value = selectedItem.value
+
+                    // 3. Execute detail fetch
                     when (selectedItem.type) {
-                        AutocompleteType.USER -> getUser(selectedItem.id)
+                        AutocompleteType.USER -> getUser(selectedItem.value)
                         AutocompleteType.REPOSITORY -> getRepository(
                             owner = selectedItem.owner.orEmpty(),
                             repo = selectedItem.value
@@ -110,10 +119,10 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun getUser(userId: Int) {
+    private fun getUser(username: String) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
-            getUserUseCase(userId).fold(
+            getUserUseCase(username).fold(
                 onSuccess = { user ->
                     _state.update { it.copy(isLoading = false, selectedUser = user) }
                 },

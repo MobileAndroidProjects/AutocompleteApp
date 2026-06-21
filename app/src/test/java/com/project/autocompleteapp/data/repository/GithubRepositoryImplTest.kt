@@ -1,10 +1,14 @@
 package com.project.autocompleteapp.data.repository
 
 import com.project.autocompleteapp.data.api.ApiService
-import com.project.autocompleteapp.domain.model.RepositoriesDto
-import com.project.autocompleteapp.domain.model.RepositoryExtendedItem
-import com.project.autocompleteapp.domain.model.UserExtendedItem
-import com.project.autocompleteapp.domain.model.UsersDto
+import com.project.autocompleteapp.data.model.OwnerDto
+import com.project.autocompleteapp.data.model.RepositoriesDto
+import com.project.autocompleteapp.data.model.RepositoryDto
+import com.project.autocompleteapp.data.model.RepositoryExtendedDto
+import com.project.autocompleteapp.data.model.UserDto
+import com.project.autocompleteapp.data.model.UserExtendedDto
+import com.project.autocompleteapp.data.model.UsersDto
+import com.project.autocompleteapp.domain.model.AutocompleteType
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -13,7 +17,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import retrofit2.Response
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class GithubRepositoryImplTest {
@@ -28,62 +31,135 @@ class GithubRepositoryImplTest {
     }
 
     @Test
-    fun `getUser should return Success when apiService returns successful response`() = runTest {
-        val userId = 1
-        val userItem = mockk<UserExtendedItem>()
-        coEvery { apiService.getUser(userId) } returns Response.success(userItem)
+    fun `getUser should return Success with domain model when apiService returns DTO`() = runTest {
+        val username = "testuser"
+        val userDto = UserExtendedDto(
+            id = 1,
+            login = username,
+            avatarUrl = "url",
+            name = "Name",
+            company = "Company",
+            blog = "blog"
+        )
+        coEvery { apiService.getUser(username) } returns userDto
 
-        val result = repository.getUser(userId)
+        val result = repository.getUser(username)
 
         assertTrue(result.isSuccess)
-        assertEquals(userItem, result.getOrNull())
+        val domainModel = result.getOrNull()
+        assertEquals(userDto.id, domainModel?.id)
+        assertEquals(userDto.login, domainModel?.login)
     }
 
     @Test
-    fun `getUser should return Failure when apiService returns null body`() = runTest {
-        val userId = 1
-        coEvery { apiService.getUser(userId) } returns Response.success(null)
+    fun `getUser should return Failure when apiService throws exception`() = runTest {
+        val username = "testuser"
+        val exception = RuntimeException("Network error")
+        coEvery { apiService.getUser(username) } throws exception
 
-        val result = repository.getUser(userId)
+        val result = repository.getUser(username)
 
         assertTrue(result.isFailure)
-        assertEquals("User not found", result.exceptionOrNull()?.message)
+        assertEquals(exception, result.exceptionOrNull())
     }
 
     @Test
-    fun `getRepository should return Success when apiService returns successful response`() = runTest {
+    fun `getRepository should return Success when apiService returns DTO`() = runTest {
         val owner = "owner"
-        val repo = "repo"
-        val repoItem = mockk<RepositoryExtendedItem>()
-        coEvery { apiService.getRepository(owner, repo) } returns Response.success(repoItem)
+        val repoName = "repo"
+        val repoDto = RepositoryExtendedDto(
+            id = 1,
+            name = repoName,
+            owner = OwnerDto(login = owner),
+            description = "desc",
+            visibility = "public",
+            defaultBranch = "main"
+        )
+        coEvery { apiService.getRepository(owner, repoName) } returns repoDto
 
-        val result = repository.getRepository(owner, repo)
+        val result = repository.getRepository(owner, repoName)
 
         assertTrue(result.isSuccess)
-        assertEquals(repoItem, result.getOrNull())
+        assertEquals(repoName, result.getOrNull()?.name)
+        assertEquals(owner, result.getOrNull()?.owner?.login)
     }
 
     @Test
-    fun `getUsers should return Success when apiService returns successful response`() = runTest {
+    fun `getRepository should return Failure when apiService throws exception`() = runTest {
+        val owner = "owner"
+        val repoName = "repo"
+        val exception = RuntimeException("Not found")
+        coEvery { apiService.getRepository(owner, repoName) } throws exception
+
+        val result = repository.getRepository(owner, repoName)
+
+        assertTrue(result.isFailure)
+        assertEquals(exception, result.exceptionOrNull())
+    }
+
+    @Test
+    fun `getUsers should return mapped AutocompleteListItems`() = runTest {
         val input = "test"
-        val usersDto = mockk<UsersDto>()
-        coEvery { apiService.getUsers("test in:login") } returns Response.success(usersDto)
+        val usersDto = UsersDto(
+            items = listOf(
+                UserDto(id = 1, login = "user1")
+            )
+        )
+        coEvery { apiService.getUsers("$input in:login") } returns usersDto
 
         val result = repository.getUsers(input)
 
         assertTrue(result.isSuccess)
-        assertEquals(usersDto, result.getOrNull())
+        val items = result.getOrNull()
+        assertEquals(1, items?.size)
+        assertEquals("user1", items?.first()?.value)
+        assertEquals(AutocompleteType.USER, items?.first()?.type)
     }
 
     @Test
-    fun `getRepositories should return Success when apiService returns successful response`() = runTest {
+    fun `getUsers should return Failure when apiService throws exception`() = runTest {
         val input = "test"
-        val repositoriesDto = mockk<RepositoriesDto>()
-        coEvery { apiService.getRepositories("test in:name") } returns Response.success(repositoriesDto)
+        val exception = RuntimeException("Search failed")
+        coEvery { apiService.getUsers("$input in:login") } throws exception
+
+        val result = repository.getUsers(input)
+
+        assertTrue(result.isFailure)
+        assertEquals(exception, result.exceptionOrNull())
+    }
+
+    @Test
+    fun `getRepositories should return mapped AutocompleteListItems`() = runTest {
+        val input = "test"
+        val reposDto = RepositoriesDto(
+            items = listOf(
+                RepositoryDto(
+                    id = 1,
+                    name = "repo1",
+                    owner = OwnerDto(login = "owner1")
+                )
+            )
+        )
+        coEvery { apiService.getRepositories("$input in:name") } returns reposDto
 
         val result = repository.getRepositories(input)
 
         assertTrue(result.isSuccess)
-        assertEquals(repositoriesDto, result.getOrNull())
+        val items = result.getOrNull()
+        assertEquals(1, items?.size)
+        assertEquals("repo1", items?.first()?.value)
+        assertEquals(AutocompleteType.REPOSITORY, items?.first()?.type)
+    }
+
+    @Test
+    fun `getRepositories should return Failure when apiService throws exception`() = runTest {
+        val input = "test"
+        val exception = RuntimeException("Search failed")
+        coEvery { apiService.getRepositories("$input in:name") } throws exception
+
+        val result = repository.getRepositories(input)
+
+        assertTrue(result.isFailure)
+        assertEquals(exception, result.exceptionOrNull())
     }
 }
