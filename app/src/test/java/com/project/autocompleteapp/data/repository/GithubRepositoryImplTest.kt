@@ -140,7 +140,7 @@ class GithubRepositoryImplTest {
                 )
             )
         )
-        coEvery { apiService.getRepositories("$input in:name") } returns reposDto
+        coEvery { apiService.getRepositories("$input in:full_name") } returns reposDto
 
         val result = repository.getRepositories(input)
 
@@ -155,7 +155,7 @@ class GithubRepositoryImplTest {
     fun `getRepositories should return Failure when apiService throws exception`() = runTest {
         val input = "test"
         val exception = RuntimeException("Search failed")
-        coEvery { apiService.getRepositories("$input in:name") } throws exception
+        coEvery { apiService.getRepositories("$input in:full_name") } throws exception
 
         val result = repository.getRepositories(input)
 

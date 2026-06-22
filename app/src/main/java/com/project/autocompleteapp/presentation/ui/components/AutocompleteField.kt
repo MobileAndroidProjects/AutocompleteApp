@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -32,7 +33,6 @@ import com.project.autocompleteapp.ui.theme.GreenLight
 import com.project.autocompleteapp.ui.theme.GreyDark
 import com.project.autocompleteapp.ui.theme.GreyLight
 import com.project.autocompleteapp.ui.theme.White
-
 
 @Composable
 fun AutocompleteField(
@@ -147,9 +147,11 @@ fun AutocompleteField(
                     Text(
                         modifier = Modifier.padding(all = dimensionResource(R.dimen.padding_xxs)),
                         style = Typography.labelMedium,
-                        text = item.value,
+                        text = item.label,
                         color = item.type.color
                     )
+
+                    HorizontalDivider()
                 }
             }
         }

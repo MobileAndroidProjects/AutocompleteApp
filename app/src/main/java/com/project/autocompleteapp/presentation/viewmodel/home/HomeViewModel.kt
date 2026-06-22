@@ -104,7 +104,7 @@ class HomeViewModel @Inject constructor(
                     ) }
 
                     // 2. Update the UI text field, but DON'T emit to _searchTrigger
-                    _searchQuery.value = selectedItem.value
+                    _searchQuery.value = selectedItem.label
 
                     // 3. Execute detail fetch
                     when (selectedItem.type) {

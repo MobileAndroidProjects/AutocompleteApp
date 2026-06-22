@@ -67,7 +67,7 @@ fun HomeScreen(
             AutocompleteField(
                 title = stringResource(R.string.autocomplete_label),
                 resultList = state.list?.sortedWith(compareBy(
-                    String.CASE_INSENSITIVE_ORDER,AutocompleteListItem::value
+                    String.CASE_INSENSITIVE_ORDER,AutocompleteListItem::label
                 )).orEmpty(),
                 input = searchQuery,
                 isLoading = state.isLoading,

@@ -48,7 +48,7 @@ class GithubRepositoryImpl @Inject constructor(
 
     override suspend fun getRepositories(input: String): Result<List<AutocompleteListItem>> {
         return try {
-            val response = api.getRepositories(searchQuery = "$input in:name")
+            val response = api.getRepositories(searchQuery = "$input in:full_name")
             Result.success(response.toDomain())
         } catch (e: Exception) {
             if (e is CancellationException) throw e

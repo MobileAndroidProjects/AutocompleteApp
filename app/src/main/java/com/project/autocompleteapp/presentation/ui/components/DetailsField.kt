@@ -43,43 +43,29 @@ fun DetailsField(
                     .weight(2f)
                     .fillMaxWidth()
             ) {
-                Text(
-                    modifier = Modifier
-                        .padding(top = dimensionResource(R.dimen.row_padding_top)),
-                    style = Typography.bodyLarge,
+                DetailsTextRow(
                     text = stringResource(R.string.id_row, it.id.toString())
                 )
 
-                Text(
-                    modifier = Modifier
-                        .padding(top = dimensionResource(R.dimen.row_padding_top)),
-                    style = Typography.bodyLarge,
+                DetailsTextRow(
                     text = stringResource(R.string.login_row, it.login)
                 )
 
                 if (!it.name.isNullOrEmpty()) {
-                    Text(
-                        modifier = Modifier
-                            .padding(top = dimensionResource(R.dimen.row_padding_top)),
-                        style = Typography.bodyLarge,
+                    DetailsTextRow(
                         text = stringResource(R.string.name_row, it.name)
                     )
                 }
 
                 if (!it.company.isNullOrEmpty()) {
-                    Text(
-                        modifier = Modifier
-                            .padding(top = dimensionResource(R.dimen.row_padding_top)),
-                        style = Typography.bodyLarge,
+                    DetailsTextRow(
                         text = stringResource(R.string.company_row, it.company)
                     )
                 }
 
                 if (!it.blog.isNullOrEmpty()) {
-                    Text(
-                        modifier = Modifier
-                            .padding(top = dimensionResource(R.dimen.row_padding_top)),
-                        style = Typography.bodyLarge,
+                    DetailsTextRow(
+                        style = Typography.bodyMedium,
                         text = stringResource(R.string.blog_row, it.blog)
                     )
                 }
@@ -126,50 +112,32 @@ fun DetailsField(
                     .padding(vertical = dimensionResource(R.dimen.padding_s))
             )
 
-            Text(
-                modifier = Modifier
-                    .padding(top = dimensionResource(R.dimen.row_padding_top)),
-                style = Typography.bodyLarge,
+            DetailsTextRow(
                 text = stringResource(R.string.id_row, it.id.toString())
             )
 
-            Text(
-                modifier = Modifier
-                    .padding(top = dimensionResource(R.dimen.row_padding_top)),
-                style = Typography.bodyLarge,
+            DetailsTextRow(
                 text = stringResource(R.string.name_row, it.name)
             )
 
-            Text(
-                modifier = Modifier
-                    .padding(top = dimensionResource(R.dimen.row_padding_top)),
-                style = Typography.bodyLarge,
+            DetailsTextRow(
                 text = stringResource(R.string.owner_row, it.owner.login)
             )
 
             if (!it.visibility.isNullOrEmpty()) {
-                Text(
-                    modifier = Modifier
-                        .padding(top = dimensionResource(R.dimen.row_padding_top)),
-                    style = Typography.bodyLarge,
+                DetailsTextRow(
                     text = stringResource(R.string.visibility_row, it.visibility)
                 )
             }
 
             if (!it.defaultBranch.isNullOrEmpty()) {
-                Text(
-                    modifier = Modifier
-                        .padding(top = dimensionResource(R.dimen.row_padding_top)),
-                    style = Typography.bodyLarge,
+                DetailsTextRow(
                     text = stringResource(R.string.default_branch_row, it.defaultBranch)
                 )
             }
 
             if (!it.description.isNullOrEmpty()) {
-                Text(
-                    modifier = Modifier
-                        .padding(top = dimensionResource(R.dimen.row_padding_top)),
-                    style = Typography.bodyLarge,
+                DetailsTextRow(
                     text = stringResource(R.string.description_row, it.description)
                 )
             }
