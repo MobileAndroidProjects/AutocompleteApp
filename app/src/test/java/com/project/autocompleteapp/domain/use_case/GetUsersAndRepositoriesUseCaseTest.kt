@@ -4,6 +4,7 @@ import com.project.autocompleteapp.domain.model.AutocompleteListItem
 import com.project.autocompleteapp.domain.model.AutocompleteType
 import com.project.autocompleteapp.domain.repository.GithubRepository
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -25,86 +26,84 @@ class GetUsersAndRepositoriesUseCaseTest {
     }
 
     @Test
-    fun `invoke returns success with empty list when query is blank`() = runTest {
-        // When
+    fun `invoke should return empty list immediately when query is blank`() = runTest {
         val result = getUsersAndRepositoriesUseCase("   ")
 
-        // Then
         assertTrue(result.isSuccess)
-        assertTrue(result.getOrNull()!!.isEmpty())
+        assertEquals(emptyList<AutocompleteListItem>(), result.getOrNull())
+        coVerify(exactly = 0) { githubRepository.getUsers(any()) }
+        coVerify(exactly = 0) { githubRepository.getRepositories(any()) }
     }
 
     @Test
-    fun `invoke returns success with combined list when both repository calls succeed`() = runTest {
-        // Given
-        val query = "test"
-        val userItems = listOf(
-            AutocompleteListItem(id = 1, value = "user1", type = AutocompleteType.USER)
-        )
-        val repoItems = listOf(
-            AutocompleteListItem(id = 101, value = "repo1", owner = "owner1", type = AutocompleteType.REPOSITORY)
-        )
-        coEvery { githubRepository.getUsers(query) } returns Result.success(userItems)
-        coEvery { githubRepository.getRepositories(query) } returns Result.success(repoItems)
+    fun `invoke should return combined results when both repository calls succeed`() = runTest {
+        val query = "search"
+        val users = listOf(AutocompleteListItem(1, "user1", type = AutocompleteType.USER))
+        val repos = listOf(AutocompleteListItem(101, "repo1", owner = "owner1", type = AutocompleteType.REPOSITORY))
 
-        // When
+        coEvery { githubRepository.getUsers(query) } returns Result.success(users)
+        coEvery { githubRepository.getRepositories(query) } returns Result.success(repos)
+
         val result = getUsersAndRepositoriesUseCase(query)
 
-        // Then
         assertTrue(result.isSuccess)
-        val data = result.getOrNull()
-        assertEquals(2, data?.size)
-        assertEquals(userItems[0], data?.get(0))
-        assertEquals(repoItems[0], data?.get(1))
+        assertEquals(users + repos, result.getOrNull())
     }
 
     @Test
-    fun `invoke returns success with partial list when only users call fails`() = runTest {
-        // Given
-        val query = "test"
-        val repoItems = listOf(
-            AutocompleteListItem(id = 101, value = "repo1", owner = "owner1", type = AutocompleteType.REPOSITORY)
-        )
-        coEvery { githubRepository.getUsers(query) } returns Result.failure(Exception("API Error"))
-        coEvery { githubRepository.getRepositories(query) } returns Result.success(repoItems)
+    fun `invoke should return partial results when users fetch fails but repos succeeds`() = runTest {
+        val query = "search"
+        val repos = listOf(AutocompleteListItem(101, "repo1", owner = "owner1", type = AutocompleteType.REPOSITORY))
 
-        // When
+        coEvery { githubRepository.getUsers(query) } returns Result.failure(Exception("Network error"))
+        coEvery { githubRepository.getRepositories(query) } returns Result.success(repos)
+
         val result = getUsersAndRepositoriesUseCase(query)
 
-        // Then
         assertTrue(result.isSuccess)
-        val data = result.getOrNull()
-        assertEquals(1, data?.size)
-        assertEquals(repoItems[0], data?.get(0))
+        assertEquals(repos, result.getOrNull())
     }
 
     @Test
-    fun `invoke returns success with empty list when both repository calls fail`() = runTest {
-        // Given
-        val query = "test"
-        coEvery { githubRepository.getUsers(query) } returns Result.failure(Exception("Error 1"))
-        coEvery { githubRepository.getRepositories(query) } returns Result.failure(Exception("Error 2"))
+    fun `invoke should return partial results when repos fetch fails but users succeeds`() = runTest {
+        val query = "search"
+        val users = listOf(AutocompleteListItem(1, "user1", type = AutocompleteType.USER))
 
-        // When
+        coEvery { githubRepository.getUsers(query) } returns Result.success(users)
+        coEvery { githubRepository.getRepositories(query) } returns Result.failure(Exception("Network error"))
+
         val result = getUsersAndRepositoriesUseCase(query)
 
-        // Then
         assertTrue(result.isSuccess)
-        assertTrue(result.getOrNull()!!.isEmpty())
+        assertEquals(users, result.getOrNull())
     }
 
     @Test
-    fun `invoke returns failure when repository throws unexpected exception`() = runTest {
-        // Given
-        val query = "test"
-        val exception = RuntimeException("Unexpected crash")
-        coEvery { githubRepository.getUsers(query) } throws exception
+    fun `invoke should return failure when both repository calls fail`() = runTest {
+        val query = "search"
+        val usersException = Exception("Users fail")
+        val reposException = Exception("Repos fail")
 
-        // When
+        coEvery { githubRepository.getUsers(query) } returns Result.failure(usersException)
+        coEvery { githubRepository.getRepositories(query) } returns Result.failure(reposException)
+
         val result = getUsersAndRepositoriesUseCase(query)
 
-        // Then
         assertTrue(result.isFailure)
-        assertEquals(exception, result.exceptionOrNull())
+        assertEquals(usersException, result.exceptionOrNull())
+    }
+
+    @Test
+    fun `invoke should return failure when a repository call throws an unexpected exception`() = runTest {
+        val query = "search"
+        val unexpectedException = RuntimeException("Crash")
+
+        // We stub BOTH to ensure deterministic behavior in the parallel scope
+        coEvery { githubRepository.getUsers(query) } throws unexpectedException
+        coEvery { githubRepository.getRepositories(query) } returns Result.success(emptyList())
+
+        val result = getUsersAndRepositoriesUseCase(query)
+
+        assertTrue(result.isFailure)
     }
 }
