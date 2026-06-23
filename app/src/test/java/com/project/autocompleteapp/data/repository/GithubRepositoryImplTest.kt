@@ -112,7 +112,7 @@ class GithubRepositoryImplTest {
         assertTrue(result.isSuccess)
         val items = result.getOrNull()
         assertEquals(1, items?.size)
-        assertEquals("user1", items?.first()?.value)
+        assertEquals("user1", items?.first()?.login)
         assertEquals(AutocompleteType.USER, items?.first()?.type)
     }
 
@@ -147,7 +147,7 @@ class GithubRepositoryImplTest {
         assertTrue(result.isSuccess)
         val items = result.getOrNull()
         assertEquals(1, items?.size)
-        assertEquals("repo1", items?.first()?.value)
+        assertEquals("repo1", items?.first()?.repo)
         assertEquals(AutocompleteType.REPOSITORY, items?.first()?.type)
     }
 

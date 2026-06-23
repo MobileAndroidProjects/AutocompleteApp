@@ -113,7 +113,7 @@ class HomeViewModelTest {
         // Given
         val query = "android"
         val mockItems = listOf(
-            AutocompleteListItem(id = 1, value = "android", type = AutocompleteType.USER)
+            AutocompleteListItem(id = 1, login = "android", type = AutocompleteType.USER)
         )
         // Specific override for this test
         coEvery { getUsersAndRepositoriesUseCase(query) } returns Result.success(mockItems)
@@ -206,7 +206,7 @@ class HomeViewModelTest {
         val username = "user1"
         val query = "user"
         val mockItems = listOf(
-            AutocompleteListItem(id = userId, value = username, type = AutocompleteType.USER)
+            AutocompleteListItem(id = userId, login = username, type = AutocompleteType.USER)
         )
         val userDetails = mockk<UserExtendedItem>(relaxed = true)
         
@@ -236,7 +236,7 @@ class HomeViewModelTest {
         val owner = "owner1"
         val query = "repo"
         val mockItems = listOf(
-            AutocompleteListItem(id = repoId, value = repoName, type = AutocompleteType.REPOSITORY, owner = owner)
+            AutocompleteListItem(id = repoId, login = owner, repo = repoName, type = AutocompleteType.REPOSITORY)
         )
         val repoDetails = mockk<RepositoryExtendedItem>(relaxed = true)
         

@@ -2,13 +2,13 @@ package com.project.autocompleteapp.domain.model
 
 data class AutocompleteListItem(
     val id: Int,
-    val value: String, // login or repo name
-    val owner: String? = null,
+    val login: String,
+    val repo: String? = null,
     val type: AutocompleteType
 ) {
     val label: String
         get() = when (type) {
-            AutocompleteType.USER -> value
-            AutocompleteType.REPOSITORY -> "$owner/$value"
+            AutocompleteType.USER -> login
+            AutocompleteType.REPOSITORY -> "$login/$repo"
         }
 }

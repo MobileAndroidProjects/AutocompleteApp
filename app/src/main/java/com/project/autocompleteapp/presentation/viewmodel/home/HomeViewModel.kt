@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.launchIn
@@ -58,18 +57,15 @@ class HomeViewModel @Inject constructor(
         _searchTrigger
             .debounce(DEBOUNCE_TIMEOUT_MILLIS)
             .distinctUntilChanged()
-            .onEach { query ->
-                // Clear results if query is too short
-                if (query.length < INPUT_LENGTH_THRESHOLD) {
-                    _state.update { it.copy(list = emptyList(), isLoading = false) }
-                }
-            }
-            .filter { it.length >= INPUT_LENGTH_THRESHOLD }
             .flatMapLatest { query ->
                 flow {
-                    _state.update { it.copy(isLoading = true) }
-                    val result = getUsersAndRepositoriesUseCase(query)
-                    emit(result)
+                    if (query.length >= INPUT_LENGTH_THRESHOLD) {
+                        _state.update { it.copy(isLoading = true) }
+                        val result = getUsersAndRepositoriesUseCase(query)
+                        emit(result)
+                    } else {
+                        emit(Result.success(emptyList()))
+                    }
                 }
             }
             .onEach { result ->
@@ -108,10 +104,10 @@ class HomeViewModel @Inject constructor(
 
                     // 3. Execute detail fetch
                     when (selectedItem.type) {
-                        AutocompleteType.USER -> getUser(selectedItem.value)
+                        AutocompleteType.USER -> getUser(selectedItem.login)
                         AutocompleteType.REPOSITORY -> getRepository(
-                            owner = selectedItem.owner.orEmpty(),
-                            repo = selectedItem.value
+                            owner = selectedItem.login,
+                            repo = selectedItem.repo.orEmpty()
                         )
                     }
                 }

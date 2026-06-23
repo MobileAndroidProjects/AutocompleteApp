@@ -9,6 +9,7 @@
     <string name="autocomplete_hint">Type Github User or Repository…</string>
     <string name="autocomplete_empty_result">No results</string>
     <string name="autocomplete_type_char">Type at least 3 characters</string>
+    <string name="autocomplete_clear_label">Clear</string>
 
     <string name="selected_user_txt">Selected User:</string>
     <string name="selected_repository_txt">Selected Repository:</string>

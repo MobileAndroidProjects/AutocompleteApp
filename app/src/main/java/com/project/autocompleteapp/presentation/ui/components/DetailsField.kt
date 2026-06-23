@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.project.autocompleteapp.R
 import com.project.autocompleteapp.ui.theme.Typography
@@ -65,7 +66,7 @@ fun DetailsField(
 
                 if (!it.blog.isNullOrEmpty()) {
                     DetailsTextRow(
-                        style = Typography.bodyMedium,
+                        style = Typography.bodyLarge.copy(fontSize = 14.sp),
                         text = stringResource(R.string.blog_row, it.blog)
                     )
                 }

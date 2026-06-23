@@ -2,7 +2,6 @@ package com.project.autocompleteapp.presentation.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,7 +13,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -25,6 +27,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.sp
 import com.project.autocompleteapp.R
 import com.project.autocompleteapp.ui.theme.Typography
 import com.project.autocompleteapp.domain.model.AutocompleteListItem
@@ -67,8 +70,7 @@ fun AutocompleteField(
         Row(
             modifier = Modifier.padding(
                 vertical = dimensionResource(R.dimen.padding_s)
-            ),
-            horizontalArrangement = Arrangement.Center
+            )
         ) {
             Text(
                 modifier = Modifier.padding(
@@ -110,12 +112,23 @@ fun AutocompleteField(
             placeholder = {
                 if (!isTextFieldFocused) {
                     Text(
-                        style = Typography.labelMedium,
+                        style = Typography.bodyLarge.copy(fontSize = 17.sp),
                         text = stringResource(R.string.autocomplete_hint),
                         color = GreyLight,
                         maxLines = 1
                     )
                 }
+            },
+            trailingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Clear,
+                    contentDescription = stringResource(R.string.autocomplete_clear_label),
+                    modifier = Modifier
+                        .clickable {
+                            onInputChanged.invoke(String())
+                            isSelected = false
+                        }
+                )
             },
             onValueChange = {
                 onInputChanged.invoke(it)

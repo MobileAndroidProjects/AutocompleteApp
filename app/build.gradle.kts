@@ -79,4 +79,5 @@ dependencies {
     implementation(libs.okhttp.logging)
 
     implementation(libs.compose.coil)
+    implementation(libs.compose.material.icons)
 }

@@ -15,7 +15,7 @@ fun UsersDto.toDomain(): List<AutocompleteListItem> {
     return this.items.map {
         AutocompleteListItem(
             id = it.id,
-            value = it.login,
+            login = it.login,
             type = AutocompleteType.USER
         )
     }
@@ -25,8 +25,8 @@ fun RepositoriesDto.toDomain(): List<AutocompleteListItem> {
     return this.items.map {
         AutocompleteListItem(
             id = it.id,
-            value = it.name,
-            owner = it.owner.login,
+            login = it.owner.login,
+            repo = it.name,
             type = AutocompleteType.REPOSITORY
         )
     }

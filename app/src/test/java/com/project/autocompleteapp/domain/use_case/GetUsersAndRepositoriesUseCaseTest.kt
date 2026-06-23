@@ -39,7 +39,7 @@ class GetUsersAndRepositoriesUseCaseTest {
     fun `invoke should return combined results when both repository calls succeed`() = runTest {
         val query = "search"
         val users = listOf(AutocompleteListItem(1, "user1", type = AutocompleteType.USER))
-        val repos = listOf(AutocompleteListItem(101, "repo1", owner = "owner1", type = AutocompleteType.REPOSITORY))
+        val repos = listOf(AutocompleteListItem(101, login = "owner1", repo = "repo1", type = AutocompleteType.REPOSITORY))
 
         coEvery { githubRepository.getUsers(query) } returns Result.success(users)
         coEvery { githubRepository.getRepositories(query) } returns Result.success(repos)
@@ -53,7 +53,7 @@ class GetUsersAndRepositoriesUseCaseTest {
     @Test
     fun `invoke should return partial results when users fetch fails but repos succeeds`() = runTest {
         val query = "search"
-        val repos = listOf(AutocompleteListItem(101, "repo1", owner = "owner1", type = AutocompleteType.REPOSITORY))
+        val repos = listOf(AutocompleteListItem(101, login = "owner1", repo = "repo1", type = AutocompleteType.REPOSITORY))
 
         coEvery { githubRepository.getUsers(query) } returns Result.failure(Exception("Network error"))
         coEvery { githubRepository.getRepositories(query) } returns Result.success(repos)
