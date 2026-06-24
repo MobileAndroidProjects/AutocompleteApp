@@ -1,18 +1,14 @@
 package com.project.autocompleteapp.presentation.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.HorizontalDivider
@@ -31,15 +27,12 @@ import androidx.compose.ui.unit.sp
 import com.project.autocompleteapp.R
 import com.project.autocompleteapp.ui.theme.Typography
 import com.project.autocompleteapp.domain.model.AutocompleteListItem
-import com.project.autocompleteapp.domain.model.AutocompleteType
-import com.project.autocompleteapp.ui.theme.GreenLight
 import com.project.autocompleteapp.ui.theme.GreyDark
 import com.project.autocompleteapp.ui.theme.GreyLight
 import com.project.autocompleteapp.ui.theme.White
 
 @Composable
 fun AutocompleteField(
-    title: String,
     resultList: List<AutocompleteListItem>,
     input: String,
     isLoading: Boolean,
@@ -51,64 +44,20 @@ fun AutocompleteField(
     var isSelected by remember { mutableStateOf(false) }
     var isTextFieldFocused by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = GreenLight,
-                shape = RoundedCornerShape(dimensionResource(R.dimen.rounded_corner))
-            )
-            .padding(all = dimensionResource(R.dimen.padding_m))
-    ) {
-        Text(
-            style = Typography.bodyLarge,
-            text = title
-        )
-
-        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.padding_m)))
-
-        Row(
-            modifier = Modifier.padding(
-                vertical = dimensionResource(R.dimen.padding_s)
-            )
-        ) {
-            Text(
-                modifier = Modifier.padding(
-                    start = dimensionResource(R.dimen.padding_xs),
-                    end = dimensionResource(R.dimen.padding_s)
-                ),
-                style = Typography.labelMedium,
-                text = stringResource(R.string.autocomplete_result_label)
-            )
-
-            LazyRow(
-                modifier = Modifier
-                    .background(
-                        color = White,
-                        shape = RoundedCornerShape(dimensionResource(R.dimen.rounded_corner))
-                    )
-            ) {
-                items(AutocompleteType.entries.size) {
-                    Text(
-                        modifier = Modifier.padding(horizontal = dimensionResource(R.dimen.padding_xs)),
-                        style = Typography.labelMedium,
-                        text = AutocompleteType.entries[it].name.lowercase(),
-                        color = AutocompleteType.entries[it].color
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.padding_m)))
-
+    Column {
         TextField(
             modifier = Modifier
                 .fillMaxWidth()
                 .onFocusChanged {
                     isTextFieldFocused = it.isFocused
                 },
-            value = input,
+            textStyle = Typography.labelMedium,
             singleLine = true,
+            value = input,
+            onValueChange = {
+                onInputChanged.invoke(it)
+                isSelected = false
+            },
             placeholder = {
                 if (!isTextFieldFocused) {
                     Text(
@@ -130,63 +79,84 @@ fun AutocompleteField(
                         }
                 )
             },
-            onValueChange = {
-                onInputChanged.invoke(it)
-                isSelected = false
+            supportingText = {
+                SupportingText(
+                    input = input,
+                    inputLengthThreshold = inputLengthThreshold,
+                    isTextFieldFocused = isTextFieldFocused,
+                    isSelected = isSelected,
+                    isLoading = isLoading,
+                    isResultListEmpty = resultList.isEmpty()
+                )
             }
         )
 
-        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.padding_xs)))
-
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(color = White)
+        AnimatedVisibility(
+            visible = resultList.isNotEmpty()
         ) {
-            items(
-                items = resultList,
-                key = { it.id }
-            ) { item ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(color = White)
-                        .clickable(true) {
-                            onItemSelected(item.id)
-                            focusManager.clearFocus()
-                            isSelected = true
-                        },
-                ) {
-                    Text(
-                        modifier = Modifier.padding(all = dimensionResource(R.dimen.padding_xxs)),
-                        style = Typography.labelMedium,
-                        text = item.label,
-                        color = item.type.color
-                    )
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(color = White)
+            ) {
+                items(
+                    items = resultList,
+                    key = { it.id }
+                ) { item ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(color = White)
+                            .clickable(true) {
+                                onItemSelected(item.id)
+                                focusManager.clearFocus()
+                                isSelected = true
+                            },
+                    ) {
+                        Text(
+                            modifier = Modifier.padding(all = dimensionResource(R.dimen.padding_xxs)),
+                            style = Typography.labelMedium,
+                            text = item.label,
+                            color = item.type.color
+                        )
 
-                    HorizontalDivider()
+                        HorizontalDivider()
+                    }
                 }
             }
         }
+    }
+}
 
-        if (isTextFieldFocused && input.isNotEmpty() && !isSelected && !isLoading) {
-            if (input.length < inputLengthThreshold) {
-                // Show "Type at least 3 characters"
-                Text(
-                    modifier = Modifier.padding(all = dimensionResource(R.dimen.padding_xxs)),
-                    style = Typography.labelMedium,
-                    text = stringResource(R.string.autocomplete_type_char),
-                    color = GreyDark
-                )
-            } else if (resultList.isEmpty()) {
-                // Show "No results found" only if we reached the threshold and list is still empty
-                Text(
-                    modifier = Modifier.padding(all = dimensionResource(R.dimen.padding_xxs)),
-                    style = Typography.labelMedium,
-                    text = stringResource(R.string.autocomplete_empty_result),
-                    color = GreyDark
-                )
-            }
+@Composable
+fun SupportingText(
+    input: String,
+    inputLengthThreshold: Int,
+    isTextFieldFocused: Boolean,
+    isSelected: Boolean,
+    isLoading: Boolean,
+    isResultListEmpty: Boolean
+) {
+    if (isTextFieldFocused && input.isNotEmpty() && !isSelected && !isLoading && isResultListEmpty) {
+        if (input.length < inputLengthThreshold) {
+            // Show "Type at least 3 characters"
+            Text(
+                modifier = Modifier
+                    .padding(all = dimensionResource(R.dimen.padding_xxs)),
+                style = Typography.labelMedium,
+                text = stringResource(R.string.autocomplete_type_char),
+                color = GreyDark
+            )
+        } else {
+            // Show "No results found" only if we reached the threshold and list is still empty
+            Text(
+                modifier = Modifier
+                    .padding(all = dimensionResource(R.dimen.padding_xxs))
+                ,
+                style = Typography.labelMedium,
+                text = stringResource(R.string.autocomplete_empty_result),
+                color = GreyDark
+            )
         }
     }
 }

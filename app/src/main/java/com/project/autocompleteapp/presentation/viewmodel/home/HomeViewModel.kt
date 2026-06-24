@@ -46,6 +46,7 @@ class HomeViewModel @Inject constructor(
     val searchQuery = _searchQuery.asStateFlow()
 
     private val _searchTrigger = MutableSharedFlow<String>()
+
     private val _effect = MutableSharedFlow<HomeEffect>()
     val effect = _effect.asSharedFlow()
 
@@ -55,12 +56,14 @@ class HomeViewModel @Inject constructor(
 
     private fun observeSearchQuery() {
         _searchTrigger
+            .onEach { query ->
+                _state.update { it.copy(isLoading = query.length >= INPUT_LENGTH_THRESHOLD) }
+            }
             .debounce(DEBOUNCE_TIMEOUT_MILLIS)
             .distinctUntilChanged()
             .flatMapLatest { query ->
                 flow {
                     if (query.length >= INPUT_LENGTH_THRESHOLD) {
-                        _state.update { it.copy(isLoading = true) }
                         val result = getUsersAndRepositoriesUseCase(query)
                         emit(result)
                     } else {
