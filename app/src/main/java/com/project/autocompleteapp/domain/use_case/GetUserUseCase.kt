@@ -7,7 +7,7 @@ import javax.inject.Inject
 class GetUserUseCase @Inject constructor(
     private val githubRepository: GithubRepository
 ) {
-    suspend operator fun invoke(username: String): Result<UserExtendedItem> = runCatching {
-        githubRepository.getUser(username).getOrThrow()
+    suspend operator fun invoke(username: String): Result<UserExtendedItem> {
+        return githubRepository.getUser(username)
     }
 }

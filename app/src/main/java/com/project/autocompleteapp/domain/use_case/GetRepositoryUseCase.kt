@@ -7,7 +7,7 @@ import javax.inject.Inject
 class GetRepositoryUseCase @Inject constructor(
     private val githubRepository: GithubRepository
 ) {
-    suspend operator fun invoke(owner: String, repo: String): Result<RepositoryExtendedItem> = runCatching {
-        githubRepository.getRepository(owner = owner, repo = repo).getOrThrow()
+    suspend operator fun invoke(owner: String, repo: String): Result<RepositoryExtendedItem> {
+        return githubRepository.getRepository(owner = owner, repo = repo)
     }
 }

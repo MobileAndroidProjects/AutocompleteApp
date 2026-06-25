@@ -10,6 +10,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.jupiter.api.assertThrows
+import kotlin.coroutines.cancellation.CancellationException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class GetUserUseCaseTest {
@@ -54,14 +56,28 @@ class GetUserUseCaseTest {
     }
 
     @Test
-    fun `invoke should catch and return Failure when repository throws exception`() = runTest {
+    fun `invoke should throws exception when repository throws any exception`() = runTest {
         val username = "testuser"
         val exception = Exception("Unexpected error")
         coEvery { githubRepository.getUser(username) } throws exception
 
-        val result = getUserUseCase(username)
+        // When
+        val throwable = assertThrows<Exception> { getUserUseCase(username) }
 
-        assertTrue(result.isFailure)
-        assertEquals(exception, result.exceptionOrNull())
+        // Then
+        assertEquals(exception, throwable)
+    }
+
+    @Test
+    fun `invoke should throws CancellationException when repository throws CancellationException`() = runTest {
+        val username = "testuser"
+        val exception = CancellationException("Cancel")
+        coEvery { githubRepository.getUser(username) } throws exception
+
+        // When
+        val throwable = assertThrows<CancellationException> { getUserUseCase(username) }
+
+        // Then
+        assertEquals(exception, throwable)
     }
 }
